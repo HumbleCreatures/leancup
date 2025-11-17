@@ -1,3 +1,4 @@
+import { continuationRouter } from "~/server/api/routers/continuation";
 import { postRouter } from "~/server/api/routers/post";
 import { sessionRouter } from "~/server/api/routers/session";
 import { ticketRouter } from "~/server/api/routers/ticket";
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   session: sessionRouter,
   ticket: ticketRouter,
   voting: votingRouter,
+  continuation: continuationRouter,
 });
 
 // export type definition of API

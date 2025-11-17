@@ -21,7 +21,7 @@ export function VotingTicketCard({
 }: VotingTicketCardProps) {
     // Calculate cost of current vote count
     const calculateCost = (count: number) => count * count;
-    
+
     // Calculate cost of adding one more vote
     const currentCost = calculateCost(currentVotes);
     const nextCost = calculateCost(currentVotes + 1);
@@ -48,10 +48,10 @@ export function VotingTicketCard({
             </p>
             <p className="text-xs text-onSurfaceVariant mb-3">by {username}</p>
 
-            {totalVotes !== undefined && (
+            {totalVotes !== undefined && totalVotes > 0 && (
                 <div className="mb-3 rounded bg-primaryContainer p-2">
                     <p className="text-xs font-medium text-onPrimaryContainer">
-                        Total votes: {totalVotes}
+                        🗳️ Total votes: {totalVotes}
                     </p>
                 </div>
             )}

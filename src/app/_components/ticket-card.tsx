@@ -8,6 +8,10 @@ interface TicketCardProps {
     username: string;
     space: string;
     isOwner: boolean;
+    voteCount?: number;
+    archivedBy?: string | null;
+    archivedAt?: Date | null;
+    totalDiscussionMs?: number;
     onMove?: (ticketId: string, newSpace: string) => void;
     onDelete?: (ticketId: string) => void;
     onEdit?: (ticketId: string, newDescription: string) => void;
@@ -19,12 +23,24 @@ export function TicketCard({
     username,
     space,
     isOwner,
+    voteCount,
+    archivedBy,
+    archivedAt,
+    totalDiscussionMs,
     onMove,
     onDelete,
     onEdit,
 }: TicketCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedDescription, setEditedDescription] = useState(description);
+
+    // Format discussion time
+    const formatDiscussionTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}m ${seconds}s`;
+    };
 
     const handleSaveEdit = () => {
         if (editedDescription.trim() && onEdit) {
@@ -67,9 +83,35 @@ export function TicketCard({
             ) : (
                 <>
                     <p className="text-sm text-onSurface whitespace-pre-wrap">{description}</p>
+
+                    {/* Vote count display */}
+                    {voteCount !== undefined && voteCount > 0 && (
+                        <div className="mt-2 rounded bg-primaryContainer px-2 py-1 inline-block">
+                            <span className="text-xs font-semibold text-onPrimaryContainer">
+                                🗳️ {voteCount} {voteCount === 1 ? "vote" : "votes"}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Archive metadata */}
+                    {space === "ARCHIVE" && (
+                        <div className="mt-3 rounded bg-surfaceVariant p-2 border-l-4 border-outline">
+                            {archivedBy && (
+                                <p className="text-xs text-onSurfaceVariant">
+                                    📦 Archived by <span className="font-semibold">{archivedBy}</span>
+                                </p>
+                            )}
+                            {totalDiscussionMs !== undefined && totalDiscussionMs > 0 && (
+                                <p className="text-xs text-onSurfaceVariant mt-1">
+                                    ⏱️ Discussed for {formatDiscussionTime(totalDiscussionMs)}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs text-onSurfaceVariant">by {username}</span>
-                        
+
                         {isOwner && (
                             <div className="flex gap-2">
                                 <button
@@ -83,7 +125,7 @@ export function TicketCard({
                                         onClick={() => onMove(id, "TODO")}
                                         className="text-xs text-primary hover:underline"
                                     >
-                                        Share
+                                        Move to TODO
                                     </button>
                                 )}
                                 {onDelete && (

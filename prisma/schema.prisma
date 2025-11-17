@@ -92,11 +92,11 @@ model Verification {
 // Lean Coffee domain models
 
 model LeanSession {
-  id                String        @id @default(cuid())
+  id                String          @id @default(cuid())
   name              String
-  shortId           String        @unique // Format: "evx-asdp-hzo"
-  createdAt         DateTime      @default(now())
-  lastInteractionAt DateTime      @default(now())
+  shortId           String          @unique // Format: "evx-asdp-hzo"
+  createdAt         DateTime        @default(now())
+  lastInteractionAt DateTime        @default(now())
   users             SessionUser[]
   tickets           Ticket[]
   votingSessions    VotingSession[]
@@ -106,15 +106,16 @@ model LeanSession {
 }
 
 model SessionUser {
-  id        String      @id @default(cuid())
-  username  String
-  sessionId String
-  session   LeanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  lastSeen  DateTime    @default(now())
-  createdAt DateTime    @default(now())
-  tickets   Ticket[]
-  votes     Vote[]
-  voterStatus VoterStatus[]
+  id                String             @id @default(cuid())
+  username          String
+  sessionId         String
+  session           LeanSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lastSeen          DateTime           @default(now())
+  createdAt         DateTime           @default(now())
+  tickets           Ticket[]
+  votes             Vote[]
+  voterStatus       VoterStatus[]
+  continuationVotes ContinuationVote[]
 
   @@unique([sessionId, username]) // Unique username per session
   @@index([sessionId])
@@ -122,17 +123,26 @@ model SessionUser {
 }
 
 model Ticket {
-  id          String      @id @default(cuid())
-  description String      @db.Text
-  space       String      // "PERSONAL" | "TODO" | "DOING" | "ARCHIVE"
-  voteCount   Int         @default(0) // Total votes received (sum of all vote counts)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  sessionId   String
-  session     LeanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userId      String
-  user        SessionUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes       Vote[]
+  id                 String              @id @default(cuid())
+  description        String              @db.Text
+  space              String // "PERSONAL" | "TODO" | "DOING" | "ARCHIVE"
+  voteCount          Int                 @default(0) // Total votes received (sum of all vote counts)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  sessionId          String
+  session            LeanSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId             String
+  user               SessionUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes              Vote[]
+  // Timer tracking
+  timerStartedAt     DateTime? // When timer started for current DOING session
+  timerPausedAt      DateTime? // When timer was paused (null if running)
+  totalDiscussionMs  Int                 @default(0) // Total discussion time in milliseconds
+  // Archive metadata
+  archivedBy         String? // Username who moved ticket to ARCHIVE
+  archivedAt         DateTime? // When ticket was archived
+  discussionSessions DiscussionSession[]
+  continuationVotes  ContinuationVote[]
 
   @@index([sessionId, space])
   @@index([userId])
@@ -148,7 +158,7 @@ model VotingSession {
   isActive      Boolean       @default(true)
   startedAt     DateTime      @default(now())
   endedAt       DateTime?
-  forceClosedBy String?       // Username who force-closed the vote
+  forceClosedBy String? // Username who force-closed the vote
   voterStatuses VoterStatus[]
 
   @@index([sessionId])
@@ -177,8 +187,8 @@ model Vote {
   ticket          Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   userId          String
   user            SessionUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-  voteCount       Int         // Number of votes (1, 2, 3, etc.)
-  pointsCost      Int         // Points spent (1, 4, 9, 16, etc.)
+  voteCount       Int // Number of votes (1, 2, 3, etc.)
+  pointsCost      Int // Points spent (1, 4, 9, 16, etc.)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -187,4 +197,33 @@ model Vote {
   @@index([ticketId])
   @@index([userId])
   @@map("vote")
+}
+
+// Discussion timer and continuation voting models
+
+model DiscussionSession {
+  id         String    @id @default(cuid())
+  ticketId   String
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  durationMs Int       @default(0) // Duration in milliseconds
+  isActive   Boolean   @default(true)
+
+  @@index([ticketId])
+  @@map("discussion_session")
+}
+
+model ContinuationVote {
+  id        String      @id @default(cuid())
+  ticketId  String
+  ticket    Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      SessionUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vote      String // "continue" | "archive"
+  createdAt DateTime    @default(now())
+
+  @@unique([ticketId, userId])
+  @@index([ticketId])
+  @@map("continuation_vote")
 }

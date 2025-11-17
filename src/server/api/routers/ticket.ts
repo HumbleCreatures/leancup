@@ -87,6 +87,7 @@ export const ticketRouter = createTRPCRouter({
                 ticketId: z.string(),
                 space: TicketSpace,
                 userId: z.string(), // To verify ownership for PERSONAL tickets
+                username: z.string().optional(), // For tracking who archived
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -129,9 +130,44 @@ export const ticketRouter = createTRPCRouter({
                 }
             }
 
+            // Calculate total discussion time if leaving DOING
+            let totalDiscussionMs = ticket.totalDiscussionMs;
+            if (ticket.space === "DOING" && input.space !== "DOING") {
+                if (ticket.timerStartedAt && !ticket.timerPausedAt) {
+                    // Timer is running, add elapsed time
+                    const elapsed = Date.now() - ticket.timerStartedAt.getTime();
+                    totalDiscussionMs += elapsed;
+                }
+            }
+
+            // Prepare update data
+            const updateData: {
+                space: string;
+                timerStartedAt?: null;
+                timerPausedAt?: null;
+                totalDiscussionMs?: number;
+                archivedBy?: string;
+                archivedAt?: Date;
+            } = {
+                space: input.space,
+            };
+
+            // Reset timer when leaving DOING
+            if (ticket.space === "DOING" && input.space !== "DOING") {
+                updateData.timerStartedAt = null;
+                updateData.timerPausedAt = null;
+                updateData.totalDiscussionMs = totalDiscussionMs;
+            }
+
+            // Track archive metadata
+            if (input.space === "ARCHIVE" && ticket.space !== "ARCHIVE") {
+                updateData.archivedBy = input.username ?? "Unknown";
+                updateData.archivedAt = new Date();
+            }
+
             const updatedTicket = await ctx.db.ticket.update({
                 where: { id: input.ticketId },
-                data: { space: input.space },
+                data: updateData,
                 include: {
                     user: true,
                 },
@@ -215,5 +251,120 @@ export const ticketRouter = createTRPCRouter({
             });
 
             return updatedTicket;
+        }),
+
+    /**
+     * Start the discussion timer for a ticket in DOING
+     */
+    startTimer: publicProcedure
+        .input(
+            z.object({
+                ticketId: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const ticket = await ctx.db.ticket.findUnique({
+                where: { id: input.ticketId },
+            });
+
+            if (!ticket) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Ticket not found",
+                });
+            }
+
+            if (ticket.space !== "DOING") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Only tickets in DOING can have timers",
+                });
+            }
+
+            const updatedTicket = await ctx.db.ticket.update({
+                where: { id: input.ticketId },
+                data: {
+                    timerStartedAt: new Date(),
+                    timerPausedAt: null,
+                },
+            });
+
+            return updatedTicket;
+        }),
+
+    /**
+     * Pause the discussion timer
+     */
+    pauseTimer: publicProcedure
+        .input(
+            z.object({
+                ticketId: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const ticket = await ctx.db.ticket.findUnique({
+                where: { id: input.ticketId },
+            });
+
+            if (!ticket) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Ticket not found",
+                });
+            }
+
+            if (!ticket.timerStartedAt || ticket.timerPausedAt) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Timer is not running",
+                });
+            }
+
+            // Calculate elapsed time
+            const elapsed = Date.now() - ticket.timerStartedAt.getTime();
+            const newTotal = ticket.totalDiscussionMs + elapsed;
+
+            const updatedTicket = await ctx.db.ticket.update({
+                where: { id: input.ticketId },
+                data: {
+                    timerPausedAt: new Date(),
+                    totalDiscussionMs: newTotal,
+                },
+            });
+
+            return updatedTicket;
+        }),
+
+    /**
+     * Get timer state for a ticket
+     */
+    getTimerState: publicProcedure
+        .input(
+            z.object({
+                ticketId: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const ticket = await ctx.db.ticket.findUnique({
+                where: { id: input.ticketId },
+            });
+
+            if (!ticket) {
+                return null;
+            }
+
+            let elapsedMs = ticket.totalDiscussionMs;
+            const isRunning = !!(ticket.timerStartedAt && !ticket.timerPausedAt);
+
+            if (isRunning && ticket.timerStartedAt) {
+                elapsedMs += Date.now() - ticket.timerStartedAt.getTime();
+            }
+
+            return {
+                isRunning,
+                elapsedMs,
+                timerStartedAt: ticket.timerStartedAt,
+                totalDiscussionMs: ticket.totalDiscussionMs,
+            };
         }),
 });

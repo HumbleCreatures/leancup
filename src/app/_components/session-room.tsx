@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { api } from "~/trpc/react";
 import { CreateTicketForm } from "./create-ticket-form";
 import { TicketCard } from "./ticket-card";
 import { VotingPanel } from "./voting-panel";
 import { VotingTicketCard } from "./voting-ticket-card";
+import { DiscussionTimer } from "./discussion-timer";
+import { ContinuationVote } from "./continuation-vote";
 
 interface SessionRoomProps {
     sessionId: string;
@@ -20,12 +23,25 @@ export function SessionRoom({
     userId,
 }: SessionRoomProps) {
     const utils = api.useUtils();
+    const [copySuccess, setCopySuccess] = useState(false);
 
     // Query session data
     const { data: session } = api.session.getByShortId.useQuery(
         { shortId: sessionShortId },
         { refetchInterval: 5000 } // Poll every 5 seconds for now (will be replaced with subscriptions)
     );
+
+    // Copy session link to clipboard
+    const handleCopyLink = async () => {
+        const url = `${window.location.origin}/session/${sessionShortId}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
 
     // Query tickets
     const { data: tickets = [] } = api.ticket.getBySession.useQuery(
@@ -77,6 +93,7 @@ export function SessionRoom({
             ticketId,
             space: newSpace as "PERSONAL" | "TODO" | "DOING" | "ARCHIVE",
             userId,
+            username,
         });
     };
 
@@ -136,15 +153,68 @@ export function SessionRoom({
     const totalPoints = activeVote?.totalPoints ?? 0;
     const pointsRemaining = totalPoints - pointsSpent;
 
+    // Get timer state for DOING ticket
+    const doingTicket = doingTickets[0];
+    const { data: timerState } = api.ticket.getTimerState.useQuery(
+        { ticketId: doingTicket?.id ?? "" },
+        {
+            enabled: !!doingTicket,
+            refetchInterval: 1000,
+        }
+    );
+
+    // Continuation voting
+    const { data: continuationVotes = [] } = api.continuation.getVotes.useQuery(
+        { ticketId: doingTicket?.id ?? "" },
+        {
+            enabled: !!doingTicket,
+            refetchInterval: 2000,
+        }
+    );
+
+    const castContinuationVote = api.continuation.castVote.useMutation({
+        onSuccess: () => {
+            void utils.continuation.getVotes.invalidate();
+            void utils.ticket.getBySession.invalidate();
+        },
+    });
+
+    const handleContinuationVote = (vote: "continue" | "archive") => {
+        if (!doingTicket) return;
+        castContinuationVote.mutate({
+            ticketId: doingTicket.id,
+            userId,
+            vote,
+        });
+    };
+
+    // Check if timer is complete (9 minutes elapsed)
+    const DISCUSSION_DURATION_MS = 9 * 60 * 1000;
+    const isTimerComplete = timerState && timerState.elapsedMs >= DISCUSSION_DURATION_MS;
+
+    // Get total users for continuation voting
+    const totalUsers = session?.users.length ?? 0;
+
     return (
         <div className="flex min-h-screen flex-col bg-background">
-            {/* Header with user avatar */}
+            {/* Header with session info and user avatar */}
             <header className="border-b border-outline bg-surface">
                 <div className="container mx-auto flex items-center justify-between px-4 py-4">
-                    <div className="flex items-center gap-4">
-                        <h1 className="font-inter text-xl font-semibold text-onSurface">
-                            Session: <span className="font-mono">{sessionShortId}</span>
+                    <div className="flex flex-col gap-1">
+                        <h1 className="font-inter text-2xl font-bold text-onSurface">
+                            {session?.name ?? "Loading..."}
                         </h1>
+                        <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm text-onSurfaceVariant">
+                                {sessionShortId}
+                            </span>
+                            <button
+                                onClick={handleCopyLink}
+                                className="rounded bg-secondaryContainer px-3 py-1 text-xs font-medium text-onSecondaryContainer hover:opacity-90 transition-opacity"
+                            >
+                                {copySuccess ? "✓ Copied!" : "📋 Copy Link"}
+                            </button>
+                        </div>
                     </div>
 
                     {/* User Avatar */}
@@ -170,6 +240,7 @@ export function SessionRoom({
                         userId={userId}
                         username={username}
                         todoTicketCount={todoTickets.length}
+                        isTimerRunning={timerState?.isRunning ?? false}
                     />
                 </div>
 
@@ -181,17 +252,38 @@ export function SessionRoom({
                         </h2>
                         <div className="space-y-3">
                             {doingTickets.map((ticket) => (
-                                <TicketCard
-                                    key={ticket.id}
-                                    id={ticket.id}
-                                    description={ticket.description}
-                                    username={ticket.user.username}
-                                    space={ticket.space}
-                                    isOwner={ticket.userId === userId}
-                                    onMove={handleMoveTicket}
-                                    onDelete={handleDeleteTicket}
-                                    onEdit={handleEditTicket}
-                                />
+                                <div key={ticket.id} className="space-y-3">
+                                    <TicketCard
+                                        id={ticket.id}
+                                        description={ticket.description}
+                                        username={ticket.user.username}
+                                        space={ticket.space}
+                                        isOwner={ticket.userId === userId}
+                                        voteCount={ticket.voteCount}
+                                        onMove={handleMoveTicket}
+                                        onDelete={handleDeleteTicket}
+                                        onEdit={handleEditTicket}
+                                    />
+
+                                    {/* Show timer or continuation vote */}
+                                    {isTimerComplete ? (
+                                        <ContinuationVote
+                                            ticketId={ticket.id}
+                                            userId={userId}
+                                            onVote={handleContinuationVote}
+                                            votes={continuationVotes}
+                                            totalUsers={totalUsers}
+                                        />
+                                    ) : (
+                                        <DiscussionTimer
+                                            ticketId={ticket.id}
+                                            onTimerComplete={() => {
+                                                // Timer complete, continuation voting starts
+                                                void utils.ticket.getTimerState.invalidate();
+                                            }}
+                                        />
+                                    )}
+                                </div>
                             ))}
                             {doingTickets.length === 0 && (
                                 <p className="text-center text-sm text-onPrimary opacity-60">
@@ -207,7 +299,7 @@ export function SessionRoom({
                             My Tickets
                         </h2>
                         <div className="space-y-3">
-                            <CreateTicketForm 
+                            <CreateTicketForm
                                 onSubmit={handleCreateTicket}
                                 isLoading={createTicket.isPending}
                             />
@@ -219,6 +311,7 @@ export function SessionRoom({
                                     username={ticket.user.username}
                                     space={ticket.space}
                                     isOwner={ticket.userId === userId}
+                                    voteCount={ticket.voteCount}
                                     onMove={handleMoveTicket}
                                     onDelete={handleDeleteTicket}
                                     onEdit={handleEditTicket}
@@ -262,6 +355,7 @@ export function SessionRoom({
                                         username={ticket.user.username}
                                         space={ticket.space}
                                         isOwner={ticket.userId === userId}
+                                        voteCount={ticket.voteCount}
                                         onMove={handleMoveTicket}
                                         onDelete={handleDeleteTicket}
                                         onEdit={handleEditTicket}
@@ -290,6 +384,10 @@ export function SessionRoom({
                                     username={ticket.user.username}
                                     space={ticket.space}
                                     isOwner={ticket.userId === userId}
+                                    voteCount={ticket.voteCount}
+                                    archivedBy={ticket.archivedBy}
+                                    archivedAt={ticket.archivedAt}
+                                    totalDiscussionMs={ticket.totalDiscussionMs}
                                     onMove={handleMoveTicket}
                                     onDelete={handleDeleteTicket}
                                     onEdit={handleEditTicket}

@@ -8,6 +8,7 @@ interface VotingPanelProps {
     userId: string;
     username: string;
     todoTicketCount: number;
+    isTimerRunning?: boolean;
 }
 
 export function VotingPanel({
@@ -15,6 +16,7 @@ export function VotingPanel({
     userId,
     username,
     todoTicketCount,
+    isTimerRunning = false,
 }: VotingPanelProps) {
     const utils = api.useUtils();
     const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
@@ -107,10 +109,11 @@ export function VotingPanel({
                 </h3>
                 <p className="text-sm text-onSurfaceVariant mb-4">
                     No active vote. Need at least 2 tickets in TODO to start voting.
+                    {isTimerRunning && " Cannot start voting while discussion is in progress."}
                 </p>
                 <button
                     onClick={handleStartVote}
-                    disabled={todoTicketCount <= 1 || startVote.isPending}
+                    disabled={todoTicketCount <= 1 || startVote.isPending || isTimerRunning}
                     className="rounded bg-primary px-4 py-2 text-sm font-medium text-onPrimary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {startVote.isPending ? "Starting..." : "Start Vote"}
@@ -171,11 +174,10 @@ export function VotingPanel({
                     {activeVote.voterStatuses.map((status) => (
                         <div
                             key={status.userId}
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                status.isDone
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${status.isDone
                                     ? "bg-primary text-onPrimary"
                                     : "bg-surfaceVariant text-onSurfaceVariant"
-                            }`}
+                                }`}
                         >
                             {status.user.username}
                             {status.isDone && " ✓"}
