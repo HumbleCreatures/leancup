@@ -34,7 +34,10 @@ Leancup is a real-time Lean Coffee session management app built on the **T3 Stac
 - `.github/design-system.md` - Material Design 3 color tokens and component guidelines
 
 ### Database Schema (Current)
-The schema is **Better Auth-focused** (User, Session, Account, Verification, Post models). Lean Coffee domain models (LeanSession, Ticket, SessionState) are **not yet implemented**. Refer to `FEATURES.md` for planned schema.
+The schema includes **Better Auth models** (User, Session, Account, Verification, Post) plus **initial Lean Coffee models**:
+- `LeanSession` - Session management with shortId (Google Meet style: "evx-asdp-hzo")
+- `SessionUser` - Username tracking per session with unique constraints
+- **Not yet implemented**: Ticket, SessionState, voting, timer models (see `FEATURES.md`)
 
 ### tRPC Context & Procedures
 - Context (`createTRPCContext`) provides `db`, `session` (Better Auth), and `headers`
@@ -153,12 +156,17 @@ type PostOutput = RouterOutputs["post"]["getById"];
 
 **Current State**: Using HTTP batched streaming; subscriptions not yet configured.
 
-## Planned Features (Not Yet Implemented)
-See `FEATURES.md` for full checklist. Key gaps:
-- Lean Coffee domain models (LeanSession, Ticket, SessionState)
+## Implementation Status
+**Completed**: Basic session management, user joining, short ID generation, cookie-based persistence, Material Design 3 theming
+
+**In Progress**: Session room UI, user presence tracking (polling every 5s)
+
+**Not Yet Implemented** (see `FEATURES.md` for full checklist):
+- Ticket CRUD operations and spaces (Personal, TO DO, DOING, ARCHIVE) 
+- Voting system and quadratic voting logic
+- Timer system with majority voting for discussions
+- Session state management (Neutral/Voting/Discussion states)
 - tRPC subscriptions + Redis pub/sub for real-time sync
-- Quadratic voting logic
-- Timer system with majority voting
 - Markdown export functionality
 - Docker Compose setup for deployment
 
@@ -169,6 +177,9 @@ See `FEATURES.md` for full checklist. Key gaps:
 4. **Real-time not yet implemented**: tRPC subscriptions and Redis pub/sub are planned for live session synchronization
 5. **Database script**: `start-database.sh` requires WSL on Windows (or native bash on Mac/Linux)
 6. **HTTP streaming**: Current batched HTTP streaming does NOT provide real-time updates to multiple clients
+7. **Session cookies**: Username persistence uses session-specific cookies (`leancup_user_${sessionId}`)
+8. **Tailwind CSS v4**: Uses `@theme` directive in globals.css, not traditional tailwind.config.js
+9. **Short ID format**: Session IDs follow Google Meet pattern "abc-def-ghi" (3 char segments)
 
 ## Common Tasks
 
@@ -198,4 +209,5 @@ export const myRouter = createTRPCRouter({
 - Inline comments for complex business logic (e.g., voting algorithms)
 - JSDoc for tRPC procedures and complex types
 - Update `FEATURES.md` when completing checklist items
+- Commit messages: Use conventional format (feat:, fix:, docs:, etc.)
 - Commit messages: Use conventional format (feat:, fix:, docs:, etc.)
