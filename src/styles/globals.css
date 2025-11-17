@@ -1,27 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   /* Material Design 3 - Warm Focus Brew Color Palette */
-  --color-primary: #8C4A2F;
-  --color-on-primary: #FFFFFF;
-  --color-primary-container: #FFDAD0;
-  --color-on-primary-container: #3B1B11;
+  --color-primary: #8c4a2f;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #ffdad0;
+  --color-on-primary-container: #3b1b11;
 
   --color-secondary: #546067;
-  --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #D0E0EA;
-  --color-on-secondary-container: #111C21;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d0e0ea;
+  --color-on-secondary-container: #111c21;
 
-  --color-background: #FAFAFA;
-  --color-on-background: #1A1A1A;
+  --color-background: #fafafa;
+  --color-on-background: #1a1a1a;
 
-  --color-surface: #FAFAFA;
-  --color-on-surface: #1A1A1A;
-  --color-surface-variant: #F1F1F1;
+  --color-surface: #fafafa;
+  --color-on-surface: #1a1a1a;
+  --color-surface-variant: #f1f1f1;
   --color-on-surface-variant: #474747;
 
   --color-outline: #767676;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
 }

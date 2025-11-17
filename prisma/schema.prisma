@@ -98,6 +98,8 @@ model LeanSession {
   createdAt         DateTime      @default(now())
   lastInteractionAt DateTime      @default(now())
   users             SessionUser[]
+  tickets           Ticket[]
+  votingSessions    VotingSession[]
 
   @@index([shortId])
   @@map("lean_session")
@@ -110,8 +112,79 @@ model SessionUser {
   session   LeanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   lastSeen  DateTime    @default(now())
   createdAt DateTime    @default(now())
+  tickets   Ticket[]
+  votes     Vote[]
+  voterStatus VoterStatus[]
 
   @@unique([sessionId, username]) // Unique username per session
   @@index([sessionId])
   @@map("session_user")
+}
+
+model Ticket {
+  id          String      @id @default(cuid())
+  description String      @db.Text
+  space       String      // "PERSONAL" | "TODO" | "DOING" | "ARCHIVE"
+  voteCount   Int         @default(0) // Total votes received (sum of all vote counts)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  sessionId   String
+  session     LeanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        SessionUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+
+  @@index([sessionId, space])
+  @@index([userId])
+  @@map("ticket")
+}
+
+// Voting system models
+
+model VotingSession {
+  id            String        @id @default(cuid())
+  sessionId     String
+  session       LeanSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  isActive      Boolean       @default(true)
+  startedAt     DateTime      @default(now())
+  endedAt       DateTime?
+  forceClosedBy String?       // Username who force-closed the vote
+  voterStatuses VoterStatus[]
+
+  @@index([sessionId])
+  @@map("voting_session")
+}
+
+model VoterStatus {
+  id              String        @id @default(cuid())
+  votingSessionId String
+  votingSession   VotingSession @relation(fields: [votingSessionId], references: [id], onDelete: Cascade)
+  userId          String
+  user            SessionUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDone          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([votingSessionId, userId])
+  @@index([votingSessionId])
+  @@map("voter_status")
+}
+
+model Vote {
+  id              String      @id @default(cuid())
+  votingSessionId String
+  ticketId        String
+  ticket          Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId          String
+  user            SessionUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voteCount       Int         // Number of votes (1, 2, 3, etc.)
+  pointsCost      Int         // Points spent (1, 4, 9, 16, etc.)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([votingSessionId, ticketId, userId]) // One vote per user per ticket per session
+  @@index([votingSessionId])
+  @@index([ticketId])
+  @@index([userId])
+  @@map("vote")
 }
