@@ -114,7 +114,7 @@ export function VotingPanel({
                 <button
                     onClick={handleStartVote}
                     disabled={todoTicketCount <= 1 || startVote.isPending || isTimerRunning}
-                    className="rounded bg-primary px-4 py-2 text-sm font-medium text-onPrimary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {startVote.isPending ? "Starting..." : "Start Vote"}
                 </button>
@@ -175,8 +175,8 @@ export function VotingPanel({
                         <div
                             key={status.userId}
                             className={`rounded-full px-3 py-1 text-xs font-medium ${status.isDone
-                                    ? "bg-primary text-onPrimary"
-                                    : "bg-surfaceVariant text-onSurfaceVariant"
+                                ? "bg-primary text-white"
+                                : "bg-surfaceVariant text-onSurfaceVariant"
                                 }`}
                         >
                             {status.user.username}
@@ -192,12 +192,12 @@ export function VotingPanel({
                     <button
                         onClick={handleMarkDone}
                         disabled={markDone.isPending}
-                        className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-onPrimary hover:opacity-90"
+                        className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                     >
                         {markDone.isPending ? "Submitting..." : "Done Voting"}
                     </button>
                 ) : (
-                    <div className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-center text-onPrimary">
+                    <div className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-center text-white">
                         ✓ You're done voting
                     </div>
                 )}

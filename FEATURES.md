@@ -1,36 +1,43 @@
 # Leancup Features Checklist
 
 ## Project Setup
-- [ ] Initialize Next.js with TypeScript
-- [ ] Configure Tailwind CSS with Material Design 3 theme
-- [ ] Set up Inter font
-- [ ] Configure Prisma with PostgreSQL
+- [x] Initialize Next.js with TypeScript
+- [x] Configure Tailwind CSS with Material Design 3 theme
+- [x] Set up Inter font
+- [x] Configure Prisma with PostgreSQL
 - [ ] Set up Redis connection
 - [ ] Configure tRPC with subscriptions
-- [ ] Set up Docker and Docker Compose
-- [ ] Configure environment variables
+- [x] Set up Docker and Docker Compose
+- [x] Configure environment variables
 
 ## Database Schema
-- [ ] Design Session model (id, shortId, createdAt, lastInteractionAt)
-- [ ] Design User model (name, sessionId, lastSeen)
-- [ ] Design Ticket model (title, description, space, votes, userId, sessionId)
-- [ ] Design SessionState model (state, currentTicketId, timerEndTime)
-- [ ] Create Prisma migrations
-- [ ] Set up database indexes
+- [x] Design Session model (id, shortId, createdAt, lastInteractionAt)
+- [x] Design User model (name, sessionId, lastSeen)
+- [x] Design Ticket model (title, description, space, votes, userId, sessionId)
+- [x] Design SessionState model (state, currentTicketId, timerEndTime)
+- [x] Create Prisma migrations
+- [x] Set up database indexes
 
 ## Authentication & User Management
-- [ ] Cookie-based user name persistence
-- [ ] Join session with unique name validation
-- [ ] Real-time user presence list
-- [ ] Handle user reconnection
-- [ ] Session joining flow
+- [x] Cookie-based user name persistence
+- [x] Join session with unique name validation
+- [x] Real-time user presence list
+- [x] Handle user reconnection
+- [x] Session joining flow
+
+### Enhanced User Presence
+- [x] Track users actively viewing the session page
+- [x] Display online/offline status indicators
+- [x] Show "last seen" timestamp for inactive users
+- [x] Update presence status on page visibility change
+- [x] Heartbeat system to detect disconnected users
 
 ## Start Page
-- [ ] Create landing page layout
-- [ ] Add Lean Coffee description
+- [x] Create landing page layout
+- [x] Add Lean Coffee description
 - [ ] Add links to Lean Coffee resources
-- [ ] "New Session" button with session creation
-- [ ] Generate short unique session IDs
+- [x] "New Session" button with session creation
+- [x] Generate short unique session IDs
 - [ ] Join existing session input
 
 ## Session States Management
@@ -41,30 +48,38 @@
 - [ ] Persist state in database
 
 ## Ticket Management
-- [ ] Personal space (private tickets)
-- [ ] TO DO space (shared tickets)
-- [ ] DOING space (active discussion)
-- [ ] ARCHIVE space (completed tickets)
-- [ ] Create ticket functionality
-- [ ] Move tickets between spaces
-- [ ] Delete tickets
-- [ ] Edit ticket details
+- [x] Personal space (private tickets)
+- [x] TO DO space (shared tickets)
+- [x] DOING space (active discussion)
+- [x] ARCHIVE space (completed tickets)
+- [x] Create ticket functionality
+- [x] Move tickets between spaces
+- [x] Delete tickets
+- [x] Edit ticket details
+
+### Drag and Drop
+- [x] Drag tickets from PERSONAL to TODO
+- [x] Drag tickets from TODO to DOING (only if DOING is empty)
+- [x] Drag tickets to ARCHIVE from any space
+- [x] Prevent dragging DOING ticket when timer is active
+- [x] Visual drag feedback and drop zones
+- [x] Touch device support for drag and drop
 
 ## Voting System
-- [ ] Quadratic voting implementation
-- [ ] Dot vote distribution logic
-- [ ] Vote count display
+- [x] Quadratic voting implementation
+- [x] Dot vote distribution logic
+- [x] Vote count display
 - [ ] Real-time vote updates
-- [ ] Sort tickets by votes
+- [x] Sort tickets by votes
 
 ## Timer System
-- [ ] Discussion timer (default 9 minutes)
+- [x] Discussion timer (default 9 minutes)
 - [ ] Timer configuration setting
-- [ ] Timer display with countdown
-- [ ] Timer completion handling
-- [ ] Thumbs up/down voting after timer
-- [ ] Majority calculation
-- [ ] Auto-move tickets based on vote outcome
+- [x] Timer display with countdown
+- [x] Timer completion handling
+- [x] Thumbs up/down voting after timer
+- [x] Majority calculation
+- [x] Auto-move tickets based on vote outcome
 
 ## Real-time Features
 - [ ] tRPC subscriptions setup
@@ -77,43 +92,50 @@
 
 ## Session Management
 - [ ] Auto-cleanup job (48h after last interaction)
-- [ ] Update lastInteractionAt on actions
+- [x] Update lastInteractionAt on actions
 - [ ] Session expiry warnings
 - [ ] Markdown export functionality
 - [ ] Export all tickets with state and time spent
 - [ ] End/Pause session button
 
 ## UI Components
-- [ ] Session lobby component
-- [ ] Ticket card component
-- [ ] Personal space component
-- [ ] TO DO space component
-- [ ] DOING space component
-- [ ] ARCHIVE space component
-- [ ] User list component
-- [ ] Timer component
-- [ ] Voting interface component
-- [ ] Thumbs up/down component
+- [x] Session lobby component
+- [x] Ticket card component
+- [x] Personal space component
+- [x] TO DO space component
+- [x] DOING space component
+- [x] ARCHIVE space component
+- [x] User list component
+- [x] Timer component
+- [x] Voting interface component
+- [x] Thumbs up/down component
 - [ ] State indicator component
 
+### Layout Redesign
+- [ ] Redesign session room layout with DOING at top (centered)
+- [ ] Position TODO space below DOING
+- [ ] Position PERSONAL (My Tickets) below TODO
+- [ ] Position ARCHIVE at the bottom
+- [ ] Ensure responsive layout on mobile devices
+
 ## Material Design 3
-- [ ] Configure Material Design 3 color system
+- [x] Configure Material Design 3 color system
 - [ ] Implement elevation system
-- [ ] Use Material Design 3 components
-- [ ] Responsive layout patterns
+- [x] Use Material Design 3 components
+- [x] Responsive layout patterns
 - [ ] Proper touch targets
 - [ ] Accessibility compliance
 
 ## Docker & Deployment
 - [ ] Create Dockerfile for Next.js app
-- [ ] Create docker-compose.yml
-- [ ] Configure PostgreSQL container
+- [x] Create docker-compose.yml
+- [x] Configure PostgreSQL container
 - [ ] Configure Redis container
-- [ ] Set up volume persistence
-- [ ] Configure networking
+- [x] Set up volume persistence
+- [x] Configure networking
 - [ ] Set up Coolify deployment
-- [ ] Environment variable management
-- [ ] Health checks
+- [x] Environment variable management
+- [x] Health checks
 
 ## Testing
 - [ ] Unit tests for voting logic
@@ -139,11 +161,11 @@
 - [ ] Graceful degradation
 
 ## Documentation
-- [ ] README with setup instructions
+- [x] README with setup instructions
 - [ ] API documentation
 - [ ] Deployment guide
 - [ ] Contributing guidelines
-- [ ] Architecture documentation
+- [x] Architecture documentation
 
 ## Nice to Have / Future Enhancements
 - [ ] Session history

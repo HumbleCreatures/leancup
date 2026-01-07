@@ -5,16 +5,16 @@
     var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* Material Design 3 - Warm Focus Brew Color Palette */
-  --color-primary: #8c4a2f;
+  /* Material Design 3 - Dark Lean Coffee Theme */
+  --color-primary: #0d0d0d;
   --color-on-primary: #ffffff;
-  --color-primary-container: #ffdad0;
-  --color-on-primary-container: #3b1b11;
+  --color-primary-container: #2e2e2e;
+  --color-on-primary-container: #e5e5e5;
 
   --color-secondary: #546067;
   --color-on-secondary: #ffffff;
   --color-secondary-container: #d0e0ea;
-  --color-on-secondary-container: #111c21;
+  --color-on-secondary-container: #1a3a4a;
 
   --color-background: #fafafa;
   --color-on-background: #1a1a1a;

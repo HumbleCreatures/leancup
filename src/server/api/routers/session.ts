@@ -175,4 +175,22 @@ export const sessionRouter = createTRPCRouter({
                 available: !existingUser,
             };
         }),
+
+    /**
+     * Update user presence (heartbeat)
+     */
+    updatePresence: publicProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await ctx.db.sessionUser.update({
+                where: { id: input.userId },
+                data: { lastSeen: new Date() },
+            });
+
+            return { success: true };
+        }),
 });

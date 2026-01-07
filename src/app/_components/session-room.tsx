@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import { User, Users, Copy, Check } from "lucide-react";
 import { api } from "~/trpc/react";
 import { CreateTicketForm } from "./create-ticket-form";
 import { TicketCard } from "./ticket-card";
@@ -8,6 +10,7 @@ import { VotingPanel } from "./voting-panel";
 import { VotingTicketCard } from "./voting-ticket-card";
 import { DiscussionTimer } from "./discussion-timer";
 import { ContinuationVote } from "./continuation-vote";
+import { ParticipantSheet } from "./participant-sheet";
 
 interface SessionRoomProps {
     sessionId: string;
@@ -24,6 +27,14 @@ export function SessionRoom({
 }: SessionRoomProps) {
     const utils = api.useUtils();
     const [copySuccess, setCopySuccess] = useState(false);
+    const [dragOverSpace, setDragOverSpace] = useState<string | null>(null);
+    const [isParticipantSheetOpen, setIsParticipantSheetOpen] = useState(false);
+
+    // Refs for drop zones to attach touch event listeners
+    const doingZoneRef = useRef<HTMLDivElement>(null);
+    const personalZoneRef = useRef<HTMLDivElement>(null);
+    const todoZoneRef = useRef<HTMLDivElement>(null);
+    const archiveZoneRef = useRef<HTMLDivElement>(null);
 
     // Query session data
     const { data: session } = api.session.getByShortId.useQuery(
@@ -73,6 +84,40 @@ export function SessionRoom({
             void utils.ticket.getBySession.invalidate();
         },
     });
+
+    // Presence heartbeat
+    const updatePresence = api.session.updatePresence.useMutation();
+
+    // Heartbeat system: Update presence every 10 seconds when page is visible
+    useEffect(() => {
+        let intervalId: NodeJS.Timeout;
+
+        const sendHeartbeat = () => {
+            if (document.visibilityState === "visible") {
+                updatePresence.mutate({ userId });
+            }
+        };
+
+        // Send initial heartbeat
+        sendHeartbeat();
+
+        // Set up interval
+        intervalId = setInterval(sendHeartbeat, 10000); // Every 10 seconds
+
+        // Handle visibility change
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                sendHeartbeat();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, [userId]);
 
     // Filter tickets by space
     const personalTickets = tickets.filter((t) => t.space === "PERSONAL");
@@ -128,6 +173,12 @@ export function SessionRoom({
         }
     );
 
+    const startVote = api.voting.startVote.useMutation({
+        onSuccess: () => {
+            void utils.voting.getActiveVote.invalidate();
+        },
+    });
+
     const castVote = api.voting.castVote.useMutation({
         onSuccess: () => {
             void utils.voting.getVotes.invalidate();
@@ -179,12 +230,27 @@ export function SessionRoom({
         },
     });
 
+    const forceEndContinuationVote = api.continuation.forceEnd.useMutation({
+        onSuccess: () => {
+            void utils.continuation.getVotes.invalidate();
+            void utils.ticket.getBySession.invalidate();
+            void utils.ticket.getTimerState.invalidate();
+        },
+    });
+
     const handleContinuationVote = (vote: "continue" | "archive") => {
         if (!doingTicket) return;
         castContinuationVote.mutate({
             ticketId: doingTicket.id,
             userId,
             vote,
+        });
+    };
+
+    const handleForceEndContinuationVote = () => {
+        if (!doingTicket) return;
+        forceEndContinuationVote.mutate({
+            ticketId: doingTicket.id,
         });
     };
 
@@ -195,75 +261,208 @@ export function SessionRoom({
     // Get total users for continuation voting
     const totalUsers = session?.users.length ?? 0;
 
+    // Drag and drop handlers
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, targetSpace: string) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDragOverSpace(targetSpace);
+    };
+
+    const handleDragLeave = () => {
+        setDragOverSpace(null);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetSpace: string) => {
+        e.preventDefault();
+        setDragOverSpace(null);
+
+        try {
+            const data = JSON.parse(e.dataTransfer.getData("application/json"));
+            const { ticketId, sourceSpace } = data as { ticketId: string; sourceSpace: string };
+
+            // Don't move if dropping in same space
+            if (sourceSpace === targetSpace) {
+                return;
+            }
+
+            // Validate move based on rules:
+            // 1. Can only move to DOING if it's empty
+            if (targetSpace === "DOING" && doingTickets.length > 0) {
+                alert("Only one ticket can be in DOING at a time");
+                return;
+            }
+
+            // 2. Can only move from PERSONAL to TODO, or from TODO to DOING/ARCHIVE
+            if (sourceSpace === "PERSONAL" && targetSpace !== "TODO" && targetSpace !== "ARCHIVE") {
+                return;
+            }
+
+            // Perform the move
+            handleMoveTicket(ticketId, targetSpace);
+        } catch (error) {
+            console.error("Error handling drop:", error);
+        }
+    };
+
+    // Touch drop handler
+    const handleTouchDrop = (targetSpace: string) => (e: Event) => {
+        const customEvent = e as CustomEvent;
+        const { ticketId, sourceSpace } = customEvent.detail as {
+            ticketId: string;
+            sourceSpace: string;
+            targetSpace: string;
+        };
+
+        // Don't move if dropping in same space
+        if (sourceSpace === targetSpace) {
+            return;
+        }
+
+        // Validate move based on rules
+        if (targetSpace === "DOING" && doingTickets.length > 0) {
+            alert("Only one ticket can be in DOING at a time");
+            return;
+        }
+
+        if (sourceSpace === "PERSONAL" && targetSpace !== "TODO" && targetSpace !== "ARCHIVE") {
+            return;
+        }
+
+        // Perform the move
+        handleMoveTicket(ticketId, targetSpace);
+    };
+
+    // Attach touch drop event listeners
+    useEffect(() => {
+        const doingZone = doingZoneRef.current;
+        const personalZone = personalZoneRef.current;
+        const todoZone = todoZoneRef.current;
+        const archiveZone = archiveZoneRef.current;
+
+        const doingHandler = handleTouchDrop("DOING");
+        const personalHandler = handleTouchDrop("PERSONAL");
+        const todoHandler = handleTouchDrop("TODO");
+        const archiveHandler = handleTouchDrop("ARCHIVE");
+
+        if (doingZone) doingZone.addEventListener("ticketdrop", doingHandler);
+        if (personalZone) personalZone.addEventListener("ticketdrop", personalHandler);
+        if (todoZone) todoZone.addEventListener("ticketdrop", todoHandler);
+        if (archiveZone) archiveZone.addEventListener("ticketdrop", archiveHandler);
+
+        return () => {
+            if (doingZone) doingZone.removeEventListener("ticketdrop", doingHandler);
+            if (personalZone) personalZone.removeEventListener("ticketdrop", personalHandler);
+            if (todoZone) todoZone.removeEventListener("ticketdrop", todoHandler);
+            if (archiveZone) archiveZone.removeEventListener("ticketdrop", archiveHandler);
+        };
+    }, [doingTickets.length]); // Re-attach when doingTickets changes for validation
+
     return (
         <div className="flex min-h-screen flex-col bg-background">
             {/* Header with session info and user avatar */}
-            <header className="border-b border-outline bg-surface">
-                <div className="container mx-auto flex items-center justify-between px-4 py-4">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="font-inter text-2xl font-bold text-onSurface">
-                            {session?.name ?? "Loading..."}
-                        </h1>
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm text-onSurfaceVariant">
-                                {sessionShortId}
-                            </span>
-                            <button
-                                onClick={handleCopyLink}
-                                className="rounded bg-secondaryContainer px-3 py-1 text-xs font-medium text-onSecondaryContainer hover:opacity-90 transition-opacity"
-                            >
-                                {copySuccess ? "✓ Copied!" : "📋 Copy Link"}
-                            </button>
+            <header className="bg-surface">
+                <div className="container mx-auto flex items-center justify-between px-4 py-4" style={{ maxWidth: '748px' }}>
+                    <div className="flex items-center gap-4">
+                        <Image
+                            src="/lean-cup-logo.png"
+                            alt="Leancup"
+                            width={40}
+                            height={40}
+                            className="shrink-0"
+                        />
+                        <div className="flex flex-col gap-1">
+                            <h1 className="font-inter text-2xl font-bold text-onSurface">
+                                {session?.name ?? "Loading..."}
+                            </h1>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm text-onSurfaceVariant">
+                                    {sessionShortId}
+                                </span>
+                                <button
+                                    onClick={handleCopyLink}
+                                    className="rounded bg-secondaryContainer px-3 py-1 text-xs font-medium text-onSecondaryContainer hover:opacity-90 transition-opacity flex items-center gap-1"
+                                >
+                                    {copySuccess ? (
+                                        <><Check className="h-3 w-3" /> Copied!</>
+                                    ) : (
+                                        <><Copy className="h-3 w-3" /> Copy Link</>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* User Avatar */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-onPrimary">
-                            <span className="font-inter text-sm font-semibold">
-                                {username.charAt(0).toUpperCase()}
+                    {/* User Info Section */}
+                    <div className="flex flex-col gap-2">
+                        {/* Avatar and Username */}
+                        <div className="flex items-center gap-3 px-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-600">
+                                <User className="h-5 w-5 text-white" />
+                            </div>
+                            <span className="font-inter text-sm font-medium text-onSurface">
+                                {username}
                             </span>
                         </div>
-                        <span className="font-inter text-sm font-medium text-onSurface">
-                            {username}
-                        </span>
+
+                        {/* Participants Button */}
+                        <button
+                            onClick={() => setIsParticipantSheetOpen(true)}
+                            className="rounded-lg bg-gray-200 px-3 py-2 hover:bg-gray-300 transition-colors"
+                        >
+                            <span className="font-inter text-xs text-gray-700 flex items-center justify-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {session?.users.length ?? 0} {session?.users.length === 1 ? "participant" : "participants"}
+                            </span>
+                        </button>
                     </div>
                 </div>
             </header>
 
-            {/* Main content - Ticket Board */}
-            <main className="container mx-auto flex-1 px-4 py-8">
-                {/* Voting Panel */}
-                <div className="mb-6">
-                    <VotingPanel
-                        sessionId={sessionId}
-                        userId={userId}
-                        username={username}
-                        todoTicketCount={todoTickets.length}
-                        isTimerRunning={timerState?.isRunning ?? false}
-                    />
-                </div>
+            {/* Participant Sheet */}
+            <ParticipantSheet
+                users={session?.users ?? []}
+                currentUserId={userId}
+                isOpen={isParticipantSheetOpen}
+                onClose={() => setIsParticipantSheetOpen(false)}
+            />
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            {/* Main content - Ticket Board */}
+            <main className="container mx-auto flex-1 px-4 py-8" style={{ maxWidth: '748px' }}>
+                <div className="flex flex-col gap-6">
                     {/* DOING Space - Always first/on top */}
-                    <div className="rounded-lg bg-primary p-4">
-                        <h2 className="mb-4 font-inter text-lg font-semibold text-onPrimary">
+                    <div
+                        ref={doingZoneRef}
+                        data-drop-zone="DOING"
+                        className={`
+                            rounded-lg bg-gray-200 p-4 transition-all
+                            ${dragOverSpace === "DOING" ? "ring-4 ring-gray-400 scale-105" : ""}
+                        `}
+                        onDragOver={(e) => handleDragOver(e, "DOING")}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, "DOING")}
+                    >
+                        <h2 className="mb-4 font-inter text-lg font-semibold text-gray-800">
                             DOING
                         </h2>
-                        <div className="space-y-3">
+                        <div className="flex flex-col items-center">
                             {doingTickets.map((ticket) => (
-                                <div key={ticket.id} className="space-y-3">
-                                    <TicketCard
-                                        id={ticket.id}
-                                        description={ticket.description}
-                                        username={ticket.user.username}
-                                        space={ticket.space}
-                                        isOwner={ticket.userId === userId}
-                                        voteCount={ticket.voteCount}
-                                        onMove={handleMoveTicket}
-                                        onDelete={handleDeleteTicket}
-                                        onEdit={handleEditTicket}
-                                    />
+                                <div key={ticket.id} className="w-full space-y-3">
+                                    <div className="flex justify-center pb-3 border-b border-gray-400">
+                                        <div className="w-full max-w-sm">
+                                            <TicketCard
+                                                id={ticket.id}
+                                                description={ticket.description}
+                                                username={ticket.user.username}
+                                                space={ticket.space}
+                                                isOwner={ticket.userId === userId}
+                                                voteCount={ticket.voteCount}
+                                                timerStartedAt={ticket.timerStartedAt}
+                                                onMove={handleMoveTicket}
+                                                onDelete={handleDeleteTicket}
+                                                onEdit={handleEditTicket}
+                                            />
+                                        </div>
+                                    </div>
 
                                     {/* Show timer or continuation vote */}
                                     {isTimerComplete ? (
@@ -271,6 +470,7 @@ export function SessionRoom({
                                             ticketId={ticket.id}
                                             userId={userId}
                                             onVote={handleContinuationVote}
+                                            onForceEnd={handleForceEndContinuationVote}
                                             votes={continuationVotes}
                                             totalUsers={totalUsers}
                                         />
@@ -286,51 +486,49 @@ export function SessionRoom({
                                 </div>
                             ))}
                             {doingTickets.length === 0 && (
-                                <p className="text-center text-sm text-onPrimary opacity-60">
+                                <p className="text-center text-sm text-gray-600">
                                     No ticket in DOING
                                 </p>
                             )}
                         </div>
                     </div>
 
-                    {/* My Tickets (Personal Space) */}
-                    <div className="rounded-lg bg-primaryContainer p-4">
-                        <h2 className="mb-4 font-inter text-lg font-semibold text-onPrimaryContainer">
-                            My Tickets
-                        </h2>
-                        <div className="space-y-3">
-                            <CreateTicketForm
-                                onSubmit={handleCreateTicket}
-                                isLoading={createTicket.isPending}
-                            />
-                            {personalTickets.map((ticket) => (
-                                <TicketCard
-                                    key={ticket.id}
-                                    id={ticket.id}
-                                    description={ticket.description}
-                                    username={ticket.user.username}
-                                    space={ticket.space}
-                                    isOwner={ticket.userId === userId}
-                                    voteCount={ticket.voteCount}
-                                    onMove={handleMoveTicket}
-                                    onDelete={handleDeleteTicket}
-                                    onEdit={handleEditTicket}
-                                />
-                            ))}
-                            {personalTickets.length === 0 && (
-                                <p className="text-center text-sm text-onPrimaryContainer opacity-60">
-                                    No personal tickets yet
-                                </p>
+                    {/* TO DO Space - Shows voting cards when voting is active */}
+                    <div
+                        ref={todoZoneRef}
+                        data-drop-zone="TODO"
+                        className={`
+                            rounded-lg bg-gray-200 p-4 transition-all
+                            ${dragOverSpace === "TODO" ? "ring-4 ring-gray-400 scale-105" : ""}
+                        `}
+                        onDragOver={(e) => handleDragOver(e, "TODO")}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, "TODO")}
+                    >
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="font-inter text-lg font-semibold text-gray-800">
+                                TO DO {activeVote?.isActive && "(Voting)"}
+                            </h2>
+                            {!activeVote?.isActive && (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-600">
+                                        {timerState?.isRunning
+                                            ? "Timer is running"
+                                            : todoTickets.length <= 1
+                                                ? "Need at least 2 tickets"
+                                                : ""}
+                                    </span>
+                                    <button
+                                        onClick={() => startVote.mutate({ sessionId })}
+                                        disabled={todoTickets.length <= 1 || startVote.isPending || (timerState?.isRunning ?? false)}
+                                        className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {startVote.isPending ? "Starting..." : "Start Vote"}
+                                    </button>
+                                </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* TO DO Space - Shows voting cards when voting is active */}
-                    <div className="rounded-lg bg-secondaryContainer p-4">
-                        <h2 className="mb-4 font-inter text-lg font-semibold text-onSecondaryContainer">
-                            TO DO {activeVote?.isActive && "(Voting)"}
-                        </h2>
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {activeVote?.isActive ? (
                                 // Show voting cards during voting
                                 todoTickets.map((ticket) => (
@@ -363,19 +561,73 @@ export function SessionRoom({
                                 ))
                             )}
                             {todoTickets.length === 0 && (
-                                <p className="text-center text-sm text-onSecondaryContainer opacity-60">
+                                <p className="text-center text-sm text-gray-600">
                                     No tickets in TO DO
                                 </p>
                             )}
                         </div>
                     </div>
 
+                    {/* My Tickets (Personal Space) */}
+                    <div
+                        ref={personalZoneRef}
+                        data-drop-zone="PERSONAL"
+                        className={`
+                            rounded-lg bg-gray-200 p-4 transition-all
+                            ${dragOverSpace === "PERSONAL" ? "ring-4 ring-gray-400 scale-105" : ""}
+                        `}
+                        onDragOver={(e) => handleDragOver(e, "PERSONAL")}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, "PERSONAL")}
+                    >
+                        <h2 className="mb-4 font-inter text-lg font-semibold text-gray-800">
+                            My Tickets
+                        </h2>
+                        <div className="mb-3">
+                            <CreateTicketForm
+                                onSubmit={handleCreateTicket}
+                                isLoading={createTicket.isPending}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {personalTickets.map((ticket) => (
+                                <TicketCard
+                                    key={ticket.id}
+                                    id={ticket.id}
+                                    description={ticket.description}
+                                    username={ticket.user.username}
+                                    space={ticket.space}
+                                    isOwner={ticket.userId === userId}
+                                    voteCount={ticket.voteCount}
+                                    onMove={handleMoveTicket}
+                                    onDelete={handleDeleteTicket}
+                                    onEdit={handleEditTicket}
+                                />
+                            ))}
+                            {personalTickets.length === 0 && (
+                                <p className="text-center text-sm text-gray-600">
+                                    No personal tickets yet
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
                     {/* ARCHIVE Space */}
-                    <div className="rounded-lg bg-surfaceVariant p-4">
-                        <h2 className="mb-4 font-inter text-lg font-semibold text-onSurfaceVariant">
+                    <div
+                        ref={archiveZoneRef}
+                        data-drop-zone="ARCHIVE"
+                        className={`
+                            rounded-lg bg-gray-200 p-4 transition-all
+                            ${dragOverSpace === "ARCHIVE" ? "ring-4 ring-gray-400 scale-105" : ""}
+                        `}
+                        onDragOver={(e) => handleDragOver(e, "ARCHIVE")}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, "ARCHIVE")}
+                    >
+                        <h2 className="mb-4 font-inter text-lg font-semibold text-gray-800">
                             ARCHIVE
                         </h2>
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {archiveTickets.map((ticket) => (
                                 <TicketCard
                                     key={ticket.id}
@@ -394,7 +646,7 @@ export function SessionRoom({
                                 />
                             ))}
                             {archiveTickets.length === 0 && (
-                                <p className="text-center text-sm text-onSurfaceVariant opacity-60">
+                                <p className="text-center text-sm text-gray-600">
                                     No archived tickets
                                 </p>
                             )}

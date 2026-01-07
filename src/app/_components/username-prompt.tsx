@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import { setUsernameCookie } from "~/app/session/[sessionId]/actions";
 
 interface UsernamePromptProps {
     sessionId: string;
@@ -20,10 +21,10 @@ export function UsernamePrompt({
     const router = useRouter();
 
     const joinSession = api.session.joinSession.useMutation({
-        onSuccess: () => {
-            // Set cookie on client side
-            document.cookie = `leancup_user_${sessionShortId}=${encodeURIComponent(username)}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
-
+        onSuccess: async () => {
+            // Set cookie server-side via server action
+            await setUsernameCookie(sessionShortId, username);
+            
             // Refresh the page to show the session room
             router.refresh();
         },

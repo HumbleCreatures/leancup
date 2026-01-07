@@ -46,7 +46,7 @@ export function CreateTicketForm({ onSubmit, isLoading }: CreateTicketFormProps)
                 <button
                     type="submit"
                     disabled={!description.trim() || isLoading}
-                    className="rounded bg-primary px-4 py-2 text-sm font-medium text-onPrimary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isLoading ? "Adding..." : "Add Ticket"}
                 </button>

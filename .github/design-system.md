@@ -1,19 +1,19 @@
 # Leancup Design System
 
 ## Overview
-The Leancup design system is built on Material Design 3 principles with a warm, collaborative, coffee-inspired theme called "Warm Focus Brew". This theme is optimized for clarity and calm focus during Lean Coffee sessions.
+ The Leancup design system is built on Material Design 3 principles with a clean, modern dark theme optimized for clarity and focus during Lean Coffee sessions.
 
 ## Typography
 - **Primary Font**: Inter (all weights)
 - Apply Inter font family consistently across the entire application
 - Use Material Design 3 typography scale for consistency
 
-## Color Palette – "Warm Focus Brew"
+## Color Palette – "Dark Lean Coffee"
 
 ### Source Colors
 These are the base colors Material 3 uses to generate all tonal palettes:
 
-- **Primary Source**: `#8C4A2F` (warm espresso tone)
+- **Primary Source**: `#0d0d0d` (rich dark tone)
 - **Secondary Source**: `#566F7A` (balanced blue-gray)
 - **Neutral Source**: `#6F6F6F`
 - **Neutral Variant Source**: `#7A6F69`
@@ -25,15 +25,15 @@ These are the base colors Material 3 uses to generate all tonal palettes:
 | Tone | Hex |
 |------|-----|
 | 0 | `#000000` |
-| 10 | `#3B1B11` |
-| 20 | `#5A2C1E` |
-| 30 | `#7A3D2A` |
-| 40 | `#8C4A2F` |
-| 50 | `#A35F44` |
-| 60 | `#BB765B` |
-| 70 | `#D38E73` |
-| 80 | `#EAA78D` |
-| 90 | `#FFDAD0` |
+| 10 | `#0d0d0d` |
+| 20 | `#1a1a1a` |
+| 30 | `#2e2e2e` |
+| 40 | `#424242` |
+| 50 | `#616161` |
+| 60 | `#757575` |
+| 70 | `#9e9e9e` |
+| 80 | `#bdbdbd` |
+| 90 | `#e5e5e5` |
 | 100 | `#FFFFFF` |
 
 #### Secondary Tonal Palette
@@ -71,10 +71,10 @@ These are the base colors Material 3 uses to generate all tonal palettes:
 #### Light Mode
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `primary` | `#8C4A2F` | Primary actions, key UI elements |
+| `primary` | `#0d0d0d` | Primary actions, key UI elements |
 | `onPrimary` | `#FFFFFF` | Text/icons on primary color |
-| `primaryContainer` | `#FFDAD0` | Highlighted primary containers |
-| `onPrimaryContainer` | `#3B1B11` | Text on primary containers |
+| `primaryContainer` | `#2e2e2e` | Highlighted primary containers |
+| `onPrimaryContainer` | `#e5e5e5` | Text on primary containers |
 | `secondary` | `#546067` | Secondary actions, less prominent UI |
 | `onSecondary` | `#FFFFFF` | Text/icons on secondary color |
 | `secondaryContainer` | `#D0E0EA` | Highlighted secondary containers |
@@ -113,10 +113,10 @@ Use these color tokens in your `tailwind.config.ts`:
 ```typescript
 colors: {
   primary: {
-    DEFAULT: '#8C4A2F',
+    DEFAULT: '#0d0d0d',
     on: '#FFFFFF',
-    container: '#FFDAD0',
-    onContainer: '#3B1B11',
+    container: '#2e2e2e',
+    onContainer: '#e5e5e5',
   },
   secondary: {
     DEFAULT: '#546067',

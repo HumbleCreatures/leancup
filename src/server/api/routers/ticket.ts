@@ -336,6 +336,40 @@ export const ticketRouter = createTRPCRouter({
         }),
 
     /**
+     * Reset the discussion timer
+     */
+    resetTimer: publicProcedure
+        .input(
+            z.object({
+                ticketId: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const ticket = await ctx.db.ticket.findUnique({
+                where: { id: input.ticketId },
+            });
+
+            if (!ticket) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Ticket not found",
+                });
+            }
+
+            // Reset timer completely
+            const updatedTicket = await ctx.db.ticket.update({
+                where: { id: input.ticketId },
+                data: {
+                    timerStartedAt: null,
+                    timerPausedAt: null,
+                    totalDiscussionMs: 0,
+                },
+            });
+
+            return updatedTicket;
+        }),
+
+    /**
      * Get timer state for a ticket
      */
     getTimerState: publicProcedure

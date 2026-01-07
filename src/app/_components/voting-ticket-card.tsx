@@ -76,7 +76,7 @@ export function VotingTicketCard({
                     <button
                         onClick={handleIncrement}
                         disabled={!canAffordOne}
-                        className="flex h-10 w-10 items-center justify-center rounded bg-primary text-lg font-bold text-onPrimary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                        className="flex h-10 w-10 items-center justify-center rounded bg-primary text-lg font-bold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                     >
                         +
                     </button>

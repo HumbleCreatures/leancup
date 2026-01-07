@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Play, Pause, RotateCcw } from "lucide-react";
 import { api } from "~/trpc/react";
 
 interface DiscussionTimerProps {
@@ -33,6 +34,13 @@ export function DiscussionTimer({
     const pauseTimer = api.ticket.pauseTimer.useMutation({
         onSuccess: () => {
             void utils.ticket.getTimerState.invalidate();
+        },
+    });
+
+    const resetTimer = api.ticket.resetTimer.useMutation({
+        onSuccess: () => {
+            void utils.ticket.getTimerState.invalidate();
+            setLocalElapsed(0);
         },
     });
 
@@ -82,12 +90,12 @@ export function DiscussionTimer({
         pauseTimer.mutate({ ticketId });
     };
 
-    return (
-        <div className="rounded-lg bg-primaryContainer p-4 border border-primary">
-            <h3 className="font-inter text-sm font-semibold text-onPrimaryContainer mb-3">
-                Discussion Timer
-            </h3>
+    const handleReset = () => {
+        resetTimer.mutate({ ticketId });
+    };
 
+    return (
+        <div className="rounded-lg bg-primaryContainer p-4">
             {/* Timer Display */}
             <div className="flex items-center justify-center mb-4">
                 <div
@@ -103,9 +111,9 @@ export function DiscussionTimer({
 
             {/* Progress Bar */}
             <div className="mb-4">
-                <div className="h-2 bg-surface rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-400 rounded-full overflow-hidden">
                     <div
-                        className={`h-full transition-all ${isComplete ? "bg-error" : "bg-secondary"
+                        className={`h-full transition-all ${isComplete ? "bg-error" : "bg-black"
                             }`}
                         style={{ width: `${Math.min(100, progress)}%` }}
                     />
@@ -115,19 +123,33 @@ export function DiscussionTimer({
             {/* Controls */}
             <div className="flex gap-2">
                 {!timerState.isRunning ? (
-                    <button
-                        onClick={handleStart}
-                        disabled={startTimer.isPending || isComplete}
-                        className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-onPrimary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {localElapsed === 0 ? "Start Discussion" : "Resume"}
-                    </button>
+                    <>
+                        <button
+                            onClick={handleStart}
+                            disabled={startTimer.isPending || isComplete}
+                            className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            <Play className="h-4 w-4" />
+                            {localElapsed === 0 ? "Start" : "Resume"}
+                        </button>
+                        {localElapsed > 0 && !isComplete && (
+                            <button
+                                onClick={handleReset}
+                                disabled={resetTimer.isPending}
+                                className="rounded bg-secondary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                                Reset
+                            </button>
+                        )}
+                    </>
                 ) : (
                     <button
                         onClick={handlePause}
                         disabled={pauseTimer.isPending}
-                        className="flex-1 rounded bg-secondary px-4 py-2 text-sm font-medium text-onSecondary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 rounded bg-secondary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
+                        <Pause className="h-4 w-4" />
                         Pause
                     </button>
                 )}

@@ -43,24 +43,22 @@ export function CreateSessionButton() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                style={{ backgroundColor: '#8C4A2F', color: '#FFFFFF' }}
-                className="rounded-lg px-8 py-4 font-semibold shadow-md transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
+                className="rounded-lg bg-primary px-8 py-4 font-semibold text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
             >
                 Create New Session
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="w-full max-w-md rounded-lg p-6 shadow-xl" style={{ backgroundColor: '#FAFAFA' }}>
-                        <h2 className="mb-4 text-2xl font-bold" style={{ color: '#1A1A1A' }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
+                        <h2 className="mb-4 text-2xl font-bold text-onSurface">
                             Create Session
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label
                                     htmlFor="sessionName"
-                                    className="mb-2 block text-sm font-medium"
-                                    style={{ color: '#1A1A1A' }}
+                                    className="mb-2 block text-sm font-medium text-onSurface"
                                 >
                                     Session Name
                                 </label>
@@ -70,12 +68,7 @@ export function CreateSessionButton() {
                                     value={sessionName}
                                     onChange={(e) => setSessionName(e.target.value)}
                                     placeholder="e.g., Team Retrospective, Planning Session"
-                                    className="w-full rounded-md border px-4 py-2 focus:outline-none focus:ring-2"
-                                    style={{
-                                        backgroundColor: '#FFFFFF',
-                                        borderColor: '#767676',
-                                        color: '#1A1A1A'
-                                    }}
+                                    className="w-full rounded-md border border-outline bg-white px-4 py-2 text-onSurface focus:outline-none focus:ring-2 focus:ring-primary"
                                     disabled={createSession.isPending}
                                     maxLength={100}
                                     autoFocus
@@ -94,23 +87,14 @@ export function CreateSessionButton() {
                                         setError("");
                                     }}
                                     disabled={createSession.isPending}
-                                    className="flex-1 rounded-md border px-4 py-2 font-semibold transition-colors hover:opacity-80 disabled:opacity-50"
-                                    style={{
-                                        backgroundColor: '#FAFAFA',
-                                        borderColor: '#767676',
-                                        color: '#1A1A1A'
-                                    }}
+                                    className="flex-1 rounded-md border border-outline bg-surface px-4 py-2 font-semibold text-onSurface transition-colors hover:opacity-80 disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={createSession.isPending || !sessionName.trim()}
-                                    className="flex-1 rounded-md px-4 py-2 font-semibold shadow-md transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-50"
-                                    style={{
-                                        backgroundColor: '#8C4A2F',
-                                        color: '#FFFFFF'
-                                    }}
+                                    className="flex-1 rounded-md bg-primary px-4 py-2 font-semibold text-white shadow-md transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-50"
                                 >
                                     {createSession.isPending ? "Creating..." : "Create"}
                                 </button>
