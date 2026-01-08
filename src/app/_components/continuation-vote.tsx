@@ -13,7 +13,7 @@ interface ContinuationVoteProps {
 }
 
 export function ContinuationVote({
-    ticketId,
+    ticketId: _ticketId,
     userId,
     onVote,
     onForceEnd,
@@ -39,7 +39,7 @@ export function ContinuationVote({
                 Continue Discussion?
             </h3>
             <p className="text-sm text-onSurfaceVariant mb-4">
-                Time's up! Vote to continue for another 9 minutes or archive this ticket.
+                Time&apos;s up! Vote to continue for another 9 minutes or archive this ticket.
             </p>
 
             {/* Vote Status */}

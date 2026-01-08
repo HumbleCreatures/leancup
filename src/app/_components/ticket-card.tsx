@@ -27,7 +27,7 @@ export function TicketCard({
     isOwner,
     voteCount,
     archivedBy,
-    archivedAt,
+    archivedAt: _archivedAt,
     totalDiscussionMs,
     timerStartedAt,
     onMove,
@@ -36,7 +36,6 @@ export function TicketCard({
 }: TicketCardProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedDescription, setEditedDescription] = useState(description);
-    const [isDragging, setIsDragging] = useState(false);
     const [touchClone, setTouchClone] = useState<HTMLElement | null>(null);
 
     // Determine if this ticket can be dragged
@@ -68,7 +67,6 @@ export function TicketCard({
             e.preventDefault();
             return;
         }
-        setIsDragging(true);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("application/json", JSON.stringify({
             ticketId: id,
@@ -77,7 +75,7 @@ export function TicketCard({
     };
 
     const handleDragEnd = () => {
-        setIsDragging(false);
+        // Drag ended
     };
 
     // Touch event handlers
@@ -87,10 +85,8 @@ export function TicketCard({
         const touch = e.touches[0];
         if (!touch) return;
 
-        setIsDragging(true);
-
         // Create a clone for visual feedback
-        const target = e.currentTarget as HTMLElement;
+        const target = e.currentTarget;
         const clone = target.cloneNode(true) as HTMLElement;
         clone.style.position = "fixed";
         clone.style.pointerEvents = "none";
@@ -120,8 +116,6 @@ export function TicketCard({
     };
 
     const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-        setIsDragging(false);
-
         if (touchClone) {
             touchClone.remove();
             setTouchClone(null);
@@ -135,10 +129,10 @@ export function TicketCard({
         if (!elementUnderTouch) return;
 
         // Find the drop zone (look for data-drop-zone attribute)
-        const dropZone = elementUnderTouch.closest("[data-drop-zone]") as HTMLElement;
+        const dropZone = elementUnderTouch.closest("[data-drop-zone]");
         if (!dropZone) return;
 
-        const targetSpace = dropZone.dataset.dropZone;
+        const targetSpace = (dropZone as HTMLElement).dataset.dropZone;
         if (!targetSpace || targetSpace === space) return;
 
         // Trigger the drop event

@@ -157,7 +157,7 @@ export function DiscussionTimer({
 
             {isComplete && (
                 <p className="text-sm text-error font-medium text-center mt-3">
-                    Time's up! Vote to continue or archive.
+                    Time&apos;s up! Vote to continue or archive.
                 </p>
             )}
         </div>

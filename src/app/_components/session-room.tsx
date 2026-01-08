@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { User, Users, Copy, Check } from "lucide-react";
 import { api } from "~/trpc/react";
 import { CreateTicketForm } from "./create-ticket-form";
 import { TicketCard } from "./ticket-card";
-import { VotingPanel } from "./voting-panel";
 import { VotingTicketCard } from "./voting-ticket-card";
 import { DiscussionTimer } from "./discussion-timer";
 import { ContinuationVote } from "./continuation-vote";
@@ -90,8 +89,6 @@ export function SessionRoom({
 
     // Heartbeat system: Update presence every 10 seconds when page is visible
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
-
         const sendHeartbeat = () => {
             if (document.visibilityState === "visible") {
                 updatePresence.mutate({ userId });
@@ -102,7 +99,7 @@ export function SessionRoom({
         sendHeartbeat();
 
         // Set up interval
-        intervalId = setInterval(sendHeartbeat, 10000); // Every 10 seconds
+        const intervalId = setInterval(sendHeartbeat, 10000); // Every 10 seconds
 
         // Handle visibility change
         const handleVisibilityChange = () => {
@@ -117,7 +114,7 @@ export function SessionRoom({
             clearInterval(intervalId);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
-    }, [userId]);
+    }, [userId, updatePresence]);
 
     // Filter tickets by space
     const personalTickets = tickets.filter((t) => t.space === "PERSONAL");
@@ -133,14 +130,14 @@ export function SessionRoom({
         });
     };
 
-    const handleMoveTicket = (ticketId: string, newSpace: string) => {
+    const handleMoveTicket = useCallback((ticketId: string, newSpace: string) => {
         moveTicket.mutate({
             ticketId,
             space: newSpace as "PERSONAL" | "TODO" | "DOING" | "ARCHIVE",
             userId,
             username,
         });
-    };
+    }, [moveTicket, userId, username]);
 
     const handleDeleteTicket = (ticketId: string) => {
         if (confirm("Are you sure you want to delete this ticket?")) {
@@ -277,8 +274,8 @@ export function SessionRoom({
         setDragOverSpace(null);
 
         try {
-            const data = JSON.parse(e.dataTransfer.getData("application/json"));
-            const { ticketId, sourceSpace } = data as { ticketId: string; sourceSpace: string };
+            const data = JSON.parse(e.dataTransfer.getData("application/json")) as { ticketId: string; sourceSpace: string };
+            const { ticketId, sourceSpace } = data;
 
             // Don't move if dropping in same space
             if (sourceSpace === targetSpace) {
@@ -304,40 +301,40 @@ export function SessionRoom({
         }
     };
 
-    // Touch drop handler
-    const handleTouchDrop = (targetSpace: string) => (e: Event) => {
-        const customEvent = e as CustomEvent;
-        const { ticketId, sourceSpace } = customEvent.detail as {
-            ticketId: string;
-            sourceSpace: string;
-            targetSpace: string;
-        };
-
-        // Don't move if dropping in same space
-        if (sourceSpace === targetSpace) {
-            return;
-        }
-
-        // Validate move based on rules
-        if (targetSpace === "DOING" && doingTickets.length > 0) {
-            alert("Only one ticket can be in DOING at a time");
-            return;
-        }
-
-        if (sourceSpace === "PERSONAL" && targetSpace !== "TODO" && targetSpace !== "ARCHIVE") {
-            return;
-        }
-
-        // Perform the move
-        handleMoveTicket(ticketId, targetSpace);
-    };
-
     // Attach touch drop event listeners
     useEffect(() => {
         const doingZone = doingZoneRef.current;
         const personalZone = personalZoneRef.current;
         const todoZone = todoZoneRef.current;
         const archiveZone = archiveZoneRef.current;
+
+        // Touch drop handler
+        const handleTouchDrop = (targetSpace: string) => (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const { ticketId, sourceSpace } = customEvent.detail as {
+                ticketId: string;
+                sourceSpace: string;
+                targetSpace: string;
+            };
+
+            // Don't move if dropping in same space
+            if (sourceSpace === targetSpace) {
+                return;
+            }
+
+            // Validate move based on rules
+            if (targetSpace === "DOING" && doingTickets.length > 0) {
+                alert("Only one ticket can be in DOING at a time");
+                return;
+            }
+
+            if (sourceSpace === "PERSONAL" && targetSpace !== "TODO" && targetSpace !== "ARCHIVE") {
+                return;
+            }
+
+            // Perform the move
+            handleMoveTicket(ticketId, targetSpace);
+        };
 
         const doingHandler = handleTouchDrop("DOING");
         const personalHandler = handleTouchDrop("PERSONAL");
@@ -355,7 +352,7 @@ export function SessionRoom({
             if (todoZone) todoZone.removeEventListener("ticketdrop", todoHandler);
             if (archiveZone) archiveZone.removeEventListener("ticketdrop", archiveHandler);
         };
-    }, [doingTickets.length]); // Re-attach when doingTickets changes for validation
+    }, [doingTickets.length, handleMoveTicket]); // Re-attach when doingTickets changes for validation
 
     return (
         <div className="flex min-h-screen flex-col bg-background">

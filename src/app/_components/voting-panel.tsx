@@ -198,7 +198,7 @@ export function VotingPanel({
                     </button>
                 ) : (
                     <div className="flex-1 rounded bg-primary px-4 py-2 text-sm font-medium text-center text-white">
-                        ✓ You're done voting
+                        ✓ You&apos;re done voting
                     </div>
                 )}
 
