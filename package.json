@@ -18,8 +18,8 @@
     "postinstall": "prisma generate",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "preview": "next build && next start",
-    "start": "next start -H 0.0.0.0",
+    "preview": "pnpm db:migrate && next build && next start",
+    "start": "pnpm db:migrate && next start -H 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
